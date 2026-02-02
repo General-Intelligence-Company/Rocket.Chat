@@ -1,0 +1,58 @@
+# Render.com deployment configuration for Rocket.Chat
+# Documentation: https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: rocketchat
+    runtime: image
+    image:
+      url: docker.io/rocketchat/rocket.chat:latest
+    plan: starter # Minimum recommended for Rocket.Chat (512MB RAM)
+    region: oregon # Change to your preferred region
+    healthCheckPath: /livez
+    envVars:
+      # MongoDB connection string - REQUIRED
+      # Use MongoDB Atlas (https://www.mongodb.com/atlas) with replica set enabled
+      # Format: mongodb+srv://user:password@cluster.mongodb.net/rocketchat?retryWrites=true&w=majority
+      - key: MONGO_URL
+        sync: false # Set this in Render dashboard with your MongoDB Atlas connection string
+
+      # MongoDB Oplog URL - REQUIRED for real-time features
+      # Format: mongodb+srv://user:password@cluster.mongodb.net/local?retryWrites=true&w=majority&authSource=admin
+      - key: MONGO_OPLOG_URL
+        sync: false # Set this in Render dashboard
+
+      # Public URL of your Rocket.Chat instance
+      # Uses Render's service URL pattern
+      - key: ROOT_URL
+        value: https://rocketchat.onrender.com
+
+      # Application port
+      - key: PORT
+        value: "3000"
+
+      # Node environment
+      - key: NODE_ENV
+        value: production
+
+      # Deployment method identifier
+      - key: DEPLOY_METHOD
+        value: render
+
+      # File upload storage path
+      - key: Accounts_AvatarStorePath
+        value: /app/uploads
+
+      # Optional: Initial admin setup (uncomment and set in dashboard if needed)
+      # - key: ADMIN_USERNAME
+      #   sync: false
+      # - key: ADMIN_PASS
+      #   sync: false
+      # - key: ADMIN_EMAIL
+      #   sync: false
+
+    # Persistent disk for file uploads (avatars, attachments, etc.)
+    disk:
+      name: rocketchat-uploads
+      mountPath: /app/uploads
+      sizeGB: 1 # Adjust based on expected usage
