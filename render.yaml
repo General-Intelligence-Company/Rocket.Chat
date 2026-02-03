@@ -1,33 +1,69 @@
 # Render.com deployment configuration for Rocket.Chat
 # Documentation: https://docs.render.com/blueprint-spec
+#
+# This configuration deploys:
+# - MongoDB as a private service with replica set (required by Rocket.Chat)
+# - Rocket.Chat web application
+#
+# IMPORTANT: Both services need persistent disks for production use.
+# The free tier does not support disks, so data will be lost on redeploy.
 
 services:
+  # ============================================
+  # MongoDB Private Service
+  # ============================================
+  - type: pserv  # Private service - only accessible within Render's private network
+    name: mongodb
+    runtime: docker
+    dockerfilePath: ./mongodb/Dockerfile
+    dockerContext: ./mongodb
+    region: oregon  # Must match Rocket.Chat region for private networking
+    plan: starter  # Minimum plan that supports persistent disks
+
+    # Persistent storage for MongoDB data
+    disk:
+      name: mongodb-data
+      mountPath: /data/db
+      sizeGB: 10  # Adjust based on expected data volume
+
+    # Environment variables for MongoDB
+    envVars:
+      - key: MONGO_REPLICA_SET_NAME
+        value: rs0
+      - key: MONGO_PORT
+        value: "27017"
+      - key: ROCKETCHAT_DB
+        value: rocketchat
+
+  # ============================================
+  # Rocket.Chat Web Application
+  # ============================================
   - type: web
     name: rocketchat
     runtime: image
     image:
       url: docker.io/rocketchat/rocket.chat:latest
-    plan: free # Note: Free tier has limited resources; upgrade for production use
-    region: oregon # Change to your preferred region
+    plan: starter  # Recommend starter or higher for production
+    region: oregon  # Must match MongoDB region
     healthCheckPath: /livez
-    envVars:
-      # MongoDB connection string - REQUIRED
-      # Use MongoDB Atlas (https://www.mongodb.com/atlas) with replica set enabled
-      # Format: mongodb+srv://user:password@cluster.mongodb.net/rocketchat?retryWrites=true&w=majority
-      - key: MONGO_URL
-        sync: false # Set this in Render dashboard with your MongoDB Atlas connection string
 
-      # MongoDB Oplog URL - REQUIRED for real-time features
-      # Format: mongodb+srv://user:password@cluster.mongodb.net/local?retryWrites=true&w=majority&authSource=admin
+    envVars:
+      # MongoDB connection string - connects to the private MongoDB service
+      # 'mongodb' is the service name, resolved via Render's internal DNS
+      - key: MONGO_URL
+        value: mongodb://mongodb:27017/rocketchat?replicaSet=rs0
+
+      # MongoDB Oplog URL - required for real-time features
+      # Connects to the 'local' database for change stream/oplog access
       - key: MONGO_OPLOG_URL
-        sync: false # Set this in Render dashboard
+        value: mongodb://mongodb:27017/local?replicaSet=rs0
 
       # Public URL of your Rocket.Chat instance
-      # Uses Render's service URL pattern
+      # Update this to your actual Render service URL after first deploy
       - key: ROOT_URL
-        value: https://rocketchat.onrender.com
+        sync: false  # Set in dashboard to match your actual URL
 
-      # Application port
+      # Application port (Render expects this)
       - key: PORT
         value: "3000"
 
@@ -39,7 +75,10 @@ services:
       - key: DEPLOY_METHOD
         value: render
 
-      # Optional: Initial admin setup (uncomment and set in dashboard if needed)
+      # ----------------------------------------
+      # Optional: Initial Admin Setup
+      # Uncomment and configure in Render dashboard for first-time setup
+      # ----------------------------------------
       # - key: ADMIN_USERNAME
       #   sync: false
       # - key: ADMIN_PASS
@@ -47,6 +86,33 @@ services:
       # - key: ADMIN_EMAIL
       #   sync: false
 
-    # Note: Persistent disk for file uploads requires a paid plan
-    # For free tier, file uploads will not persist across deploys
-    # Upgrade to starter plan and add disk config for production use
+    # Persistent disk for file uploads (requires paid plan)
+    # Uncomment for production use:
+    # disk:
+    #   name: rocketchat-uploads
+    #   mountPath: /app/uploads
+    #   sizeGB: 10
+
+# ============================================
+# Alternative: Free Tier Configuration
+# ============================================
+# If you want to test on free tier (no persistent storage):
+# 1. Change both 'plan: starter' to 'plan: free'
+# 2. Remove or comment out the 'disk' sections
+# 3. Note: Data will be lost on each redeploy!
+#
+# For production, always use starter plan or higher with persistent disks.
+
+# ============================================
+# Alternative: Use MongoDB Atlas
+# ============================================
+# If you prefer MongoDB Atlas instead of self-hosted:
+# 1. Remove the mongodb service above
+# 2. Update MONGO_URL and MONGO_OPLOG_URL to use Atlas connection strings:
+#    - key: MONGO_URL
+#      sync: false  # Set Atlas connection string in dashboard
+#    - key: MONGO_OPLOG_URL
+#      sync: false  # Set Atlas oplog connection string in dashboard
+#
+# Atlas connection string format:
+# mongodb+srv://user:password@cluster.mongodb.net/rocketchat?retryWrites=true&w=majority
