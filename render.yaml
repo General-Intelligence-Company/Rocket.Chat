@@ -7,7 +7,7 @@ services:
     runtime: image
     image:
       url: docker.io/rocketchat/rocket.chat:latest
-    plan: starter # Minimum recommended for Rocket.Chat (512MB RAM)
+    plan: free # Note: Free tier has limited resources; upgrade for production use
     region: oregon # Change to your preferred region
     healthCheckPath: /livez
     envVars:
@@ -39,10 +39,6 @@ services:
       - key: DEPLOY_METHOD
         value: render
 
-      # File upload storage path
-      - key: Accounts_AvatarStorePath
-        value: /app/uploads
-
       # Optional: Initial admin setup (uncomment and set in dashboard if needed)
       # - key: ADMIN_USERNAME
       #   sync: false
@@ -51,8 +47,6 @@ services:
       # - key: ADMIN_EMAIL
       #   sync: false
 
-    # Persistent disk for file uploads (avatars, attachments, etc.)
-    disk:
-      name: rocketchat-uploads
-      mountPath: /app/uploads
-      sizeGB: 1 # Adjust based on expected usage
+    # Note: Persistent disk for file uploads requires a paid plan
+    # For free tier, file uploads will not persist across deploys
+    # Upgrade to starter plan and add disk config for production use
