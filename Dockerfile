@@ -9,9 +9,14 @@ ENV NODE_ENV=production \
     DEPLOY_METHOD=render
 
 # Health check using the PORT env var that Render provides
-# Use shell form (CMD with /bin/sh -c) to enable variable expansion
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD /bin/sh -c 'wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health || exit 1'
+# Rocket.Chat takes 2-3+ minutes to fully start, so we use generous timing:
+# - start-period: 300s (5 min) - grace period before health checks count as failures
+# - interval: 60s - time between checks
+# - timeout: 30s - max time to wait for response
+# - retries: 3 - number of consecutive failures before unhealthy
+# Using /api/info endpoint - it's lightweight and returns quickly once the server is up
+HEALTHCHECK --interval=60s --timeout=30s --start-period=300s --retries=3 \
+    CMD /bin/sh -c 'wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/api/info || exit 1'
 
 # The base image already has CMD ["node", "main.js"]
 # Rocket.Chat reads PORT from environment and listens on it

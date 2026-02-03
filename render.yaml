@@ -9,27 +9,26 @@ services:
       url: docker.io/rocketchat/rocket.chat:latest
     plan: free # Note: Free tier has limited resources; upgrade for production use
     region: oregon # Change to your preferred region
-    healthCheckPath: /livez
+    healthCheckPath: /api/info
     envVars:
       # MongoDB connection string - REQUIRED
       # Use MongoDB Atlas (https://www.mongodb.com/atlas) with replica set enabled
       # Format: mongodb+srv://user:password@cluster.mongodb.net/rocketchat?retryWrites=true&w=majority
       - key: MONGO_URL
-        sync: false # Set this in Render dashboard with your MongoDB Atlas connection string
+        value: "SET_IN_RENDER_DASHBOARD"  # Replace in Render dashboard with your MongoDB Atlas connection string
 
       # MongoDB Oplog URL - REQUIRED for real-time features
       # Format: mongodb+srv://user:password@cluster.mongodb.net/local?retryWrites=true&w=majority&authSource=admin
       - key: MONGO_OPLOG_URL
-        sync: false # Set this in Render dashboard
+        value: "SET_IN_RENDER_DASHBOARD"  # Replace in Render dashboard with your MongoDB Atlas oplog URL
 
       # Public URL of your Rocket.Chat instance
       # Uses Render's service URL pattern
       - key: ROOT_URL
         value: https://rocketchat.onrender.com
 
-      # Application port
-      - key: PORT
-        value: "3000"
+      # NOTE: PORT is intentionally not set here - Render provides it automatically
+      # Rocket.Chat will read the PORT environment variable from Render
 
       # Node environment
       - key: NODE_ENV
