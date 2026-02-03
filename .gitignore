@@ -1,0 +1,12 @@
+# MongoDB data (for local development)
+data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
