@@ -17,12 +17,13 @@ RUN chmod +x /init-replica-set.sh && \
 RUN mkdir -p /data/db /data/configdb && \
     chown -R mongodb:mongodb /data
 
-# Expose MongoDB port
-EXPOSE 27017
+# Default port - Render will override with $PORT env var (typically 10000)
+ENV PORT=27017
 
 # Health check - verify MongoDB is running and replica set is initialized
+# Uses $PORT which Render sets for private services
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
-    CMD mongosh --quiet --eval "try { rs.status().ok } catch(e) { 0 }" | grep -q 1 || exit 1
+    CMD mongosh --port $PORT --quiet --eval "db.adminCommand({ replSetGetStatus: 1 }).ok" | grep -q 1 || exit 1
 
 # Use custom entrypoint that initializes replica set
 ENTRYPOINT ["/bin/bash", "/init-replica-set.sh"]

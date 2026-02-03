@@ -3,9 +3,13 @@ set -e
 
 # MongoDB Replica Set Initialization Script for Render
 # This script starts MongoDB with replica set configuration and initializes it
+#
+# On Render, the $PORT environment variable is set by the platform (typically 10000)
+# We use this port for MongoDB to comply with Render's networking requirements
 
 REPLICA_SET_NAME="${MONGO_REPLICA_SET_NAME:-rs0}"
-MONGO_PORT="${MONGO_PORT:-27017}"
+# Use Render's PORT env var, fallback to 27017 for local development
+MONGO_PORT="${PORT:-27017}"
 
 echo "=========================================="
 echo "Starting MongoDB with Replica Set: $REPLICA_SET_NAME"
@@ -17,7 +21,6 @@ mkdir -p /data/db /data/configdb /var/log/mongodb
 chown -R mongodb:mongodb /data 2>/dev/null || true
 
 # Start MongoDB in the background with replica set enabled
-# Using foreground logging to stdout for container compatibility
 echo "Starting mongod process..."
 mongod --replSet "$REPLICA_SET_NAME" --bind_ip_all --port "$MONGO_PORT" --dbpath /data/db &
 MONGOD_PID=$!
@@ -61,7 +64,7 @@ if [ "$RS_STATUS" != "1" ]; then
     echo "Initializing replica set '$REPLICA_SET_NAME'..."
 
     # Initialize single-node replica set
-    # Using localhost for single-node setup on Render
+    # Using localhost with the configured port for Render compatibility
     INIT_RESULT=$(mongosh --quiet --port "$MONGO_PORT" --eval "
         var config = {
             _id: '$REPLICA_SET_NAME',
